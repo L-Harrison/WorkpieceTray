@@ -6,7 +6,7 @@
         xmlns:tray="clr-namespace:WorkpieceTray;assembly=WorkpieceTray"
         xmlns:local="clr-namespace:Tray.Test"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="750" Width="1100">
     <Grid>
         <tray:TrayCore />
     </Grid>

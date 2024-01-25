@@ -28,6 +28,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
+using WorkpieceTray.Controls;
 using WorkpieceTray.Extensions;
 
 using Cursor = ScottPlot.Cursor;
@@ -187,7 +188,8 @@ namespace WorkpieceTray
             Backend.PlottableDragged += new EventHandler((sender, e) => PlottableDragged?.Invoke(sender, e));
             Backend.PlottableDropped += new EventHandler((sender, e) => PlottableDropped?.Invoke(sender, e));
             Backend.Configuration.ScaleChanged += new EventHandler((sender, e) => Backend.Resize(ScaledWidth, ScaledHeight, useDelayedRendering: true));
-            Configuration = Backend.Configuration;
+
+               Configuration = Backend.Configuration;
 
             //Configuration.AltLeftClickDragZoom = false;
             //Configuration.LeftClickDragPan = false;
@@ -196,9 +198,9 @@ namespace WorkpieceTray
             //Configuration.DpiStretch = false;
             //Configuration.DpiStretchRatio =.9f;
 
-            Backend.Plot.Style(ScottPlot.Style.Blue1);
+            //Backend.Plot.Style(ScottPlot.Style.Blue1);
             Backend.Plot.Grid(false);
-            Backend.Plot.Frameless(true);
+            //Backend.Plot.Frameless(true);
 
             Backend.Plot.Layout(0, 0, 0, 0, 0);
 
@@ -242,35 +244,32 @@ namespace WorkpieceTray
             // create a timer to update the GUI
             _renderTimer = new DispatcherTimer();
             _renderTimer.Interval = TimeSpan.FromMilliseconds(20);
-            _renderTimer.Tick += (sender, e) =>AutoRender(false);
+            _renderTimer.Tick += (sender, e) => AutoRender(false);
             _renderTimer.Start();
 
 
-            //Random rand = new(0);
-            //for (int i = 0; i < 5; i++)
-            //{
-            //    Plot.AddCircle(
-            //        x: rand.Next(-10, 10),
-            //        y: rand.Next(-10, 10),
-            //        radius: rand.Next(1, 7),
-            //        lineWidth: rand.Next(1, 10));
-            //}
+            AxesChanged += TrayCore_AxesChanged;
 
 
 
-            int row =14;
-           int col =5;
+            int row = 14;
+            int col = 5;
             var te = DrawCells(row, col);
             foreach (var item in DrawCells(row, col))
             {
-                DrawCell(item.currentCol *20, item.currentRow *20, 8, 1,item.cellName);
+                DrawCell(item.currentCol * 20, item.currentRow * 20, 8, 1, item.cellName);
             }
             Plot.AxisScaleLock(true); // this forces pixels to have 1:1 scale ratio
 
 
         }
 
-        private List<(int index, string cellName, int currentRow, int currentCol)> DrawCells(int rows,int columns)
+        private void TrayCore_AxesChanged(object? sender, EventArgs e)
+        {
+            var r = (TrayCore)sender;
+        }
+
+        private List<(int index, string cellName, int currentRow, int currentCol)> DrawCells(int rows, int columns)
         {
             var res = new List<(int index, string cellName, int currentRow, int currentCol)>();
             for (int row = 1; row <= rows; row++)
@@ -283,19 +282,18 @@ namespace WorkpieceTray
                     //    injectionVolumse[i].Name = $"{index_name}-{i}";
                     //}
                     res.Add(index_name);
-                  
+
                 }
             }
             return res;
         }
-        private Ellipse DrawCell(double x, double y, double radius, double lineWidth,string cellName)
+        List<Cell> texts = new List<Cell>();
+        private Cell DrawCell(double x, double y, double radius, double lineWidth, string cellName)
         {
-            Plot.AddText(cellName, x- radius/2, y +radius /2,  color: System.Drawing.Color.White);
-            return Plot.AddCircle(
-                   x: x,
-                   y: y,
-                   radius: radius,
-                   lineWidth: (float)lineWidth);
+            var cell = Plot.AddCell(cellName, x, y, radius, radius, size: 13,lableColor:null,color:null, lineWidth: (float)lineWidth, default);
+            cell.Alignment = Alignment.MiddleCenter;
+            //cell.Color =System.Drawing. Color.Red;
+            return cell;
         }
 
         #region Plot method
@@ -540,10 +538,34 @@ namespace WorkpieceTray
                             }
                         }
                     }
-
-                    var dr = Plot.GetDraggable(pixelX, pixelY, 30);
-                    if (dr != null && dr is ScatterPlot scatterPlot)
+                    foreach (var item in Plot.GetCelltable())
                     {
+                        if (item is Cell plottable)
+                        {
+                            int xAxisIndex = plottable.XAxisIndex;
+                            int yAxisIndex = plottable.YAxisIndex;
+
+                            double xCoords = Plot.GetCoordinateX((float)pixelX, xAxisIndex);
+                            double yCoords = Plot.GetCoordinateY((float)pixelY, yAxisIndex);
+                            Coordinate c = new(xCoords, yCoords);
+
+                            ICell hittable = (ICell)plottable;
+                            if (hittable.CellTest(c))
+                            {
+                                plottable.BorderLineWidth = 4;
+                                plottable.FontBold=true;
+                            }
+                            else
+                            {
+                                plottable.BorderLineWidth = 1;
+                                plottable.FontBold = false;
+                            }
+                        }
+                    }
+                    var dr = Plot.GetCelltable(pixelX, pixelY);
+                    if (dr != null&&dr is Cell cell )
+                    {
+                        Trace.WriteLine((dr as Cell).Label);
                         //scatterPlot.MarkerShape = MarkerShape.filledDiamond;
                         //Crosshair.Color = scatterPlot.Color;
                     }
@@ -572,6 +594,10 @@ namespace WorkpieceTray
                 };
                 contentControl.MouseWheel += (sender, e) =>
                 {
+                    foreach (var item in texts)
+                    {
+                        item.FontSize +=(float) e.Delta * 0.01f;
+                    }
                     Backend.MouseWheel(GetInputState(e, e.Delta));
                     AutoZoom = false;
                 };
