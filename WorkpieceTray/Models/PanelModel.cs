@@ -1,4 +1,6 @@
-﻿using System;
+﻿using ScottPlot.Plottable;
+
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -13,6 +15,9 @@ namespace WorkpieceTray.Models
     {
         public List<Cell> Cells { get; set; } = new();
         public CPanel Panel { get; set; }
+        public Text Header { set; get; }
+        public Text Header2 { set; get; }
+
 
         public int PanelIndex { get; set; }
         public double PanelX { get; set; } 
@@ -23,6 +28,8 @@ namespace WorkpieceTray.Models
 
         public double CellSize { get; set; }
         public double Radius { get; set; }
+
+   
 
         public Color? PanelColor { get; set; }
         public Color? CellColor { get; set; }

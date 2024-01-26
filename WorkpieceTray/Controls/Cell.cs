@@ -20,6 +20,7 @@ namespace WorkpieceTray.Controls
 {
     public class DraggedEventArgs : System.EventArgs
     {
+        public CoordinateRect CoordinateRect { get; set; }
         public double CoordinateX { get; set; }
         public double CoordinateY { get; set; }
     }
@@ -242,8 +243,8 @@ namespace WorkpieceTray.Controls
             float yPixelARC = dims.GetPixelY(Y);
 
             // Use 'dims' to determine how large the radius is in pixel units
-            float xRadiusPixelsARC = dims.GetPixelX(X + RadiusX - 1.5) - xPixelARC;
-            float yRadiusPixelsARC = dims.GetPixelY(Y + RadiusY - 1.5) - yPixelARC;
+            float xRadiusPixelsARC = dims.GetPixelX(X + RadiusX - 2) - xPixelARC;
+            float yRadiusPixelsARC = dims.GetPixelY(Y + RadiusY - 2) - yPixelARC;
 
             // Center, rotate, and scale the canvas so the ellipse fits in a radius 1 rectangle at the origin
             gfxx.TranslateTransform(xPixelARC, yPixelARC);
@@ -283,8 +284,8 @@ namespace WorkpieceTray.Controls
 
             #region 绘制文字
 
-            if (Font.Size <= 1)
-                Font.Size = 1;
+            if (Font.Size <= 5)
+                Font.Size = 5;
             if (Font.Size > 33)
                 Font.Size = 33;
 

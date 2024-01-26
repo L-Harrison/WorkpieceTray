@@ -7,9 +7,9 @@
         xmlns:tray="clr-namespace:WorkpieceTray;assembly=WorkpieceTray"
         Title="MainWindow"
         Width="1000"
-        Height="500"
+        Height="530"
         mc:Ignorable="d">
-    <Grid  Background="Red">
+    <Grid Background="Red">
         <tray:TrayCore />
     </Grid>
 </Window>

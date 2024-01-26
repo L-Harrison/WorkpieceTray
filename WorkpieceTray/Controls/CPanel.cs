@@ -125,7 +125,7 @@ namespace WorkpieceTray.Controls
                 Rectangle = new CoordinateRect(snapped.X - wdith, snapped.X - wdith, snapped.Y, snapped.Y );
             }
 
-            Dragged(this, new DraggedEventArgs { CoordinateX = coordinateX, CoordinateY = coordinateY });
+            Dragged(this, new DraggedEventArgs { CoordinateRect= Rectangle, CoordinateX = coordinateX, CoordinateY = coordinateY });
         }
     }
 }

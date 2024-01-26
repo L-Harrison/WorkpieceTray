@@ -60,6 +60,7 @@ namespace WorkpieceTray
         internal bool AutoZoom { set; get; } = true;
         internal bool isHighRefresh = false;
 
+
         private System.Windows.Threading.DispatcherTimer _renderTimer;
 
         List<PanelModel> Panels = new();
@@ -248,7 +249,7 @@ namespace WorkpieceTray
                         cell.Volumns = 15;
                         while (true)
                         {
-                            if (cell.CurrentVol+.05>=cell.Volumns)
+                            if (cell.CurrentVol + .05 >= cell.Volumns)
                             {
                                 break;
                             }
@@ -259,19 +260,7 @@ namespace WorkpieceTray
                 }
             });
 
-            this.KeyDown += (sender, e) =>
-            {
-                if (/*e.KeyboardDevice.Modifiers == ModifierKeys.Control &&*/ e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl)
-                {
-                    //同时按下了Ctrl + H键（H要最后按，因为判断了此次事件的e.Key）
-                    //修饰键只能按下Ctrl，如果还同时按下了其他修饰键，则不会进入
-                    isLeftKeyDown = true;
-                }
-            };
-            this.KeyDown += (sender, e) =>
-            {
-                isLeftKeyDown = false;
-            };
+
         }
 
 
@@ -282,8 +271,8 @@ namespace WorkpieceTray
             int row = 16;
             int col = 6;
             var cellSize = 20d;
-            var radius = 8d;
-            var panelWidth = (col + 2) * cellSize;
+            var radius = 8.5d;
+            var panelWidth = (col + 1.5) * cellSize;
 
             var x = 0d;
             var y = 0d;
@@ -298,6 +287,7 @@ namespace WorkpieceTray
                       panelColor: System.Drawing.Color.LightGray,
                       cellColor: null,
                       cellBorderColor: null);
+            pane0.Panel.DragEnabled = false;
             Panels.Add(pane0);
 
             x += panelWidth;
@@ -306,8 +296,8 @@ namespace WorkpieceTray
             row = 14;
             col = 5;
             cellSize = 22.7;
-            radius = 8;
-            panelWidth = (col + 2) * cellSize;
+            radius = 9;
+            panelWidth = (col + 1.5) * cellSize;
 
             for (int panel = 1; panel < 5; panel++)
             {
@@ -321,13 +311,14 @@ namespace WorkpieceTray
                        radius: radius,
                        panelColor: System.Drawing.Color.LightGray,
                        cellColor: null,
-                       cellBorderColor: System.Drawing.Color.Gray);
+                       cellBorderColor: System.Drawing.Color.Gray/*,HeaderIsVisble:true*/);
+                pane.Panel.DragEnabled = false;
                 Panels.Add(pane);
 
                 x += panelWidth;
 
             }
-       
+
         }
 
         #region Plot method
@@ -510,8 +501,8 @@ namespace WorkpieceTray
         {
             AutoZoom = true;
             var s = Panels.Select(_ => _.Panel.GetAxisLimits());
-            Plot.YAxis.SetSizeLimit(min: 0, max: 350);
-            Plot.XAxis.SetSizeLimit(min: 0, max: 800);
+            //Plot.YAxis.SetSizeLimit(min: 0, max: 350);
+            //Plot.XAxis.SetSizeLimit(min: 0, max: 800);
             Plot.AxisAuto();
             Refresh(isHighRefresh);
         }
@@ -589,31 +580,18 @@ namespace WorkpieceTray
                     Backend.MouseUp(GetInputState(e));
                     ReleaseMouseCapture();
                 };
-                contentControl.KeyDown += (sender, e) =>
-                {
-                    if (/*e.KeyboardDevice.Modifiers == ModifierKeys.Control &&*/ e.Key == Key.LeftCtrl||e.Key == Key.RightCtrl)
-                    {
-                        //同时按下了Ctrl + H键（H要最后按，因为判断了此次事件的e.Key）
-                        //修饰键只能按下Ctrl，如果还同时按下了其他修饰键，则不会进入
-                        isLeftKeyDown = true;
-                    }
-                };
-                contentControl.KeyDown += (sender, e) =>
-                {
-                    isLeftKeyDown = false;
-                };
                 contentControl.MouseWheel += (sender, e) =>
                 {
 
-                    if (isLeftKeyDown)
-                    foreach (var item in Panels)
-                    {
-                        //if (Configuration.MiddleClickDragZoom)
-                        foreach (var cell in item.Cells)
+                    if (Keyboard.IsKeyDown(Key.LeftCtrl))
+                        foreach (var item in Panels)
                         {
-                            cell.FontSize += (float)e.Delta * 0.01f;
+                            //if (Configuration.MiddleClickDragZoom)
+                            foreach (var cell in item.Cells)
+                            {
+                                cell.FontSize += (float)e.Delta * 0.01f;
+                            }
                         }
-                    }
                     else
                     {
                         Backend.MouseWheel(GetInputState(e, e.Delta));
@@ -655,13 +633,18 @@ namespace WorkpieceTray
             {
                 grid.SizeChanged += (sender, e) =>
                 {
-                    Backend.Resize(ScaledWidth, ScaledHeight, useDelayedRendering: true);
+                    //var width = Panels.Min(_ => _.Panel.Rectangle.XMax - _.Panel.Rectangle.XMin);
+                    //var height = Panels.Min(_ => _.Panel.Rectangle.YMax - _.Panel.Rectangle.YMin);
+                    //var red = (float)(width / height);
+
+
+                    Backend.Resize((float)e.NewSize.Width, (float)e.NewSize.Height, useDelayedRendering: true);
+                    //Backend.Resize(ScaledWidth, ScaledHeight, useDelayedRendering: true);
                     Backend.Plot.AxisAuto();
                 };
-           
+
             }
         }
-        bool isLeftKeyDown=false;
         #endregion
 
     }
