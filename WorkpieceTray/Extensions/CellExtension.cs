@@ -26,17 +26,15 @@ namespace WorkpieceTray.Extensions
         /// <summary>
         /// Add an ellipse to the plot
         /// </summary>
-        public static Cell AddCell(this Plot plot, string label, double x, double y, double xRadius, double yRadius, float size=12, System.Drawing.Color? lableColor = null, System.Drawing.Color? color = null, float lineWidth = 2, LineStyle lineStyle = LineStyle.Solid)
+        public static Cell AddCell(this Plot plot, string label, double x, double y, double xRadius, double yRadius, float size = 12, System.Drawing.Color? fontColor = null, System.Drawing.Color? color = null, System.Drawing.Color? borderColor = null, float lineWidth = 2, LineStyle lineStyle = LineStyle.Solid)
         {
-            var font = new ScottPlot.Drawing.Font() { Size = size, Color = lableColor ?? plot.GetNextColor() };
-            var c = color ?? plot.GetNextColor();
-            Cell plottable = new(x, y, xRadius, yRadius)
+            var font = new ScottPlot.Drawing.Font() { Size = size, Color = fontColor ?? plot.GetNextColor() };
+            Cell plottable = new(x, y, xRadius, yRadius, color ?? plot.GetNextColor(), borderColor: borderColor ?? plot.GetNextColor())
             {
-                BorderColor = c,
                 BorderLineWidth = lineWidth,
                 BorderLineStyle = lineStyle,
                 Label = label,
-                Font=font
+                Font = font,
             };
             plot.Add(plottable);
             return plottable;
@@ -68,5 +66,24 @@ namespace WorkpieceTray.Extensions
         /// </summary>
         public static IPlottable[] GetCelltable(this Plot plot)
             => plot.GetPlottables().Where(x => x is ICell).ToArray();
+
+        public static List<(int index, string cellName, int currentRow, int currentCol)> BuilderCells(this (int rows, int columns) source)
+        {
+            var res = new List<(int index, string cellName, int currentRow, int currentCol)>();
+            for (int row = 1; row <= source.rows; row++)
+            {
+                for (int col = 0; col < source.columns; col++)
+                {
+                    var index_name = source.columns.ToIndexAndName(row, col);
+                    //for (int i = 0; i < injectionVolumse.Count; i++)
+                    //{
+                    //    injectionVolumse[i].Name = $"{index_name}-{i}";
+                    //}
+                    res.Add(index_name);
+
+                }
+            }
+            return res;
+        }
     }
 }

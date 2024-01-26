@@ -12,31 +12,43 @@ using ScottPlot.SnapLogic;
 using System.Windows.Media;
 using Color = System.Drawing.Color;
 using Font = ScottPlot.Drawing.Font;
+using System.Drawing.Drawing2D;
+using System.Reflection.Metadata;
+using System.Security.Permissions;
 
 namespace WorkpieceTray.Controls
 {
-    public class Cell : IPlottable, IHasColor, IHasArea, ICell
+    public class DraggedEventArgs : System.EventArgs
+    {
+        public double CoordinateX { get; set; }
+        public double CoordinateY { get; set; }
+    }
+    public class Cell : IPlottable, IHasColor, IHasArea, ICell, IDraggable
     {
 
-
         // data
-
-
         // customization
         public bool IsVisible { get; set; } = true;
         public int XAxisIndex { get; set; } = 0;
         public int YAxisIndex { get; set; } = 0;
-        public bool BackgroundFill = false;
+        //public bool BackgroundFill = false;
         public Color BackgroundColor;
         public Font Font = new Font();
-        public Color Color { get ; set; }
+
+        public event EventHandler Dragged = delegate { };
+
+        /// <summary>
+        /// 字体颜色
+        /// </summary>
+        public Color FontColor { get => Font.Color; set => Font.Color = value; }
+
         public string FontName { get => Font.Name; set => Font.Name = value; }
         public float FontSize { get => Font.Size; set => Font.Size = value; }
         public bool FontBold { get => Font.Bold; set => Font.Bold = value; }
         public Alignment Alignment { get => Font.Alignment; set => Font.Alignment = value; }
         public float Rotation { get => Font.Rotation; set => Font.Rotation = value; }
-        public float BorderSize { get; set; } = 0;
-        public Color BorderColor { get; set; } = System.Drawing.Color.Black;
+        //public float BorderSize { get; set; } = 0;
+
         public float PixelOffsetX { get; set; } = 0;
         public float PixelOffsetY { get; set; } = 0;
         public RectangleF LastRenderRectangleCoordinates { get; set; }
@@ -50,12 +62,12 @@ namespace WorkpieceTray.Controls
         /// <summary>
         /// Horizontal center of the circle (axis units)
         /// </summary>
-        double X { get; }
+        double X { get; set; }
 
         /// <summary>
         /// Vertical center of the circle (axis units)
         /// </summary>
-        double Y { get; }
+        double Y { get; set; }
 
         /// <summary>
         /// Horizontal radius (axis units)
@@ -66,7 +78,14 @@ namespace WorkpieceTray.Controls
         /// Vertical radius (axis units)
         /// </summary>
         public double RadiusY { get; set; }
-
+        /// <summary>
+        /// 映射成体积
+        /// </summary>
+        public double CurrentVol { get; set; } = 0d;
+        /// <summary>
+        /// 总体积
+        /// </summary>
+        public double Volumns { get; set; } = 10d;
 
         /// <summary>
         /// Outline thickness (pixel units)
@@ -78,21 +97,25 @@ namespace WorkpieceTray.Controls
         /// </summary>
         public LineStyle BorderLineStyle { get; set; } = LineStyle.Solid;
 
-
+        /// <summary>
+        /// 边框颜色
+        /// </summary>
+        public Color BorderColor { get; set; } = System.Drawing.Color.Black;
+        /// <summary>
+        /// 填充颜色
+        /// </summary>
+        public Color Color { get; set; }
 
         /// <summary>
         /// Fill pattern
         /// </summary>
-        public HatchStyle HatchStyle { get; set; } = HatchStyle.None;
+        public ScottPlot.Drawing.HatchStyle HatchStyle { get; set; } = ScottPlot.Drawing.HatchStyle.None;
 
         /// <summary>
         /// Alternate color for fill pattern
         /// </summary>
         public Color HatchColor { get; set; } = Color.Black;
 
-        /// <summary>
-        /// Text to appear in the legend
-        /// </summary>
         public string Label { get; set; } = string.Empty;
 
         /// <summary>
@@ -105,11 +128,28 @@ namespace WorkpieceTray.Controls
             RadiusX = xRadius;
             RadiusY = yRadius;
         }
+        /// <summary>
+        /// Create an ellipse centered at (x, y) with the given horizontal and vertical radius
+        /// </summary>
+        public Cell(double x, double y, double xRadius, double yRadius, Color? color = null, Color? borderColor = null, Color? fontColor = null)
+        {
+            X = x;
+            Y = y;
+            RadiusX = xRadius;
+            RadiusY = yRadius;
+            Color = color ?? default;
+            BorderColor = borderColor ?? default;
+            FontColor = fontColor ?? default;
+
+        }
 
         // These default values are fine for most cases
 
         public Cursor CellCursor { get; set; } = Cursor.All;
         public bool CellTestEnabled { get; set; } = true;
+        public bool DragEnabled { get; set; } = true;
+
+        public Cursor DragCursor => Cursor.Hand;
 
         public void ValidateData(bool deep = false)
         {
@@ -126,19 +166,19 @@ namespace WorkpieceTray.Controls
         // Return an empty array for plottables that do not appear in the legend
         public LegendItem[] GetLegendItems()
         {
-            if (string.IsNullOrWhiteSpace(Label))
-                return LegendItem.None;
+            //if (string.IsNullOrWhiteSpace(Label))
+            //    return LegendItem.None;
 
-            LegendItem item = new(this)
-            {
-                label = Label,
-                color = Color,
-                borderColor = BorderColor,
-                borderLineStyle = BorderLineStyle,
-                borderWith = BorderLineWidth,
-            };
+            //LegendItem item = new(this)
+            //{
+            //    label = Label,
+            //    color = Color,
+            //    borderColor = BorderColor,
+            //    borderLineStyle = BorderLineStyle,
+            //    borderWith = BorderLineWidth,
+            //};
 
-            return LegendItem.Single(item);
+            return LegendItem.None;
         }
 
         // This method returns the bounds of the data
@@ -154,10 +194,14 @@ namespace WorkpieceTray.Controls
         // This method describes how to plot the data on the cart.
         public void Render(PlotDimensions dims, System.Drawing.Bitmap bmp, bool lowQuality = false)
         {
+         
+
+            #region 绘制圆/椭圆
+
             // Use ScottPlot's GDI helper functions to create System.Drawing objects
-            using var gfxx = ScottPlot.Drawing.GDI.Graphics(bmp, dims, lowQuality);
+            using var gfxxc = ScottPlot.Drawing.GDI.Graphics(bmp, dims, lowQuality);
             using var pen = ScottPlot.Drawing.GDI.Pen(BorderColor, BorderLineWidth, BorderLineStyle);
-            using var brush = ScottPlot.Drawing.GDI.Brush(Color, HatchColor, HatchStyle);
+            //using var brush = ScottPlot.Drawing.GDI.Brush(Color, HatchColor, HatchStyle);
 
             // Use 'dims' methods to convert between axis coordinates and pixel positions
             float xPixel = dims.GetPixelX(X);
@@ -168,29 +212,88 @@ namespace WorkpieceTray.Controls
             float yRadiusPixels = dims.GetPixelY(Y + RadiusY) - yPixel;
 
             // Center, rotate, and scale the canvas so the ellipse fits in a radius 1 rectangle at the origin
-            gfxx.TranslateTransform(xPixel, yPixel);
-            gfxx.RotateTransform(Rotation);
-            gfxx.ScaleTransform(xRadiusPixels, yRadiusPixels);
+            gfxxc.TranslateTransform(xPixel, yPixel);
+            gfxxc.RotateTransform(Rotation);
+            gfxxc.ScaleTransform(xRadiusPixels, yRadiusPixels);
             RectangleF rect = new(-1, -1, 2, 2);
 
             // Render data by drawing on the Graphics object
-            if (Color != Color.Transparent)
-                gfxx.FillEllipse(brush, rect);
+            //if (Color != Color.Transparent)
+            //    gfxxc.FillEllipse(brush, rect);
 
             // Otherwise the pen width will be scaled as well
             using System.Drawing.Drawing2D.Matrix invertScaleMatrix = new();
             invertScaleMatrix.Scale(1 / xRadiusPixels, 1 / yRadiusPixels);
             pen.Transform = invertScaleMatrix;
 
-            gfxx.DrawEllipse(pen, rect);
+            gfxxc.DrawEllipse(pen, rect);
+            #endregion
 
+            #region MyRegion
+            // Use ScottPlot's GDI helper functions to create System.Drawing objects
+            using var gfxx = ScottPlot.Drawing.GDI.Graphics(bmp, dims, lowQuality);
+            using var penARC = ScottPlot.Drawing.GDI.Pen(Color, BorderLineWidth, BorderLineStyle);
+            using var brushARC = ScottPlot.Drawing.GDI.Brush(Color, HatchColor, HatchStyle);
+
+            GraphicsPath myGraphicsPath = new GraphicsPath();
+
+            // Use 'dims' methods to convert between axis coordinates and pixel positions
+            float xPixelARC = dims.GetPixelX(X);
+            float yPixelARC = dims.GetPixelY(Y);
+
+            // Use 'dims' to determine how large the radius is in pixel units
+            float xRadiusPixelsARC = dims.GetPixelX(X + RadiusX - 1.5) - xPixelARC;
+            float yRadiusPixelsARC = dims.GetPixelY(Y + RadiusY - 1.5) - yPixelARC;
+
+            // Center, rotate, and scale the canvas so the ellipse fits in a radius 1 rectangle at the origin
+            gfxx.TranslateTransform(xPixelARC, yPixelARC);
+            gfxx.RotateTransform(Rotation);
+            gfxx.ScaleTransform(xRadiusPixelsARC, yRadiusPixelsARC);
+
+            // Otherwise the pen width will be scaled as well
+            using System.Drawing.Drawing2D.Matrix invertScaleMatrixARC = new();
+            invertScaleMatrixARC.Scale(1 / xRadiusPixelsARC, 1 / yRadiusPixelsARC);
+            penARC.Transform = invertScaleMatrixARC;
+
+            //gfxx.DrawArc(penARC, rectARC, startAngle, sweepAngle);
+            RectangleF rectARC = new(-1, -1, 2, 2);
+
+            float startAngle = 0f;
+            float sweepAngle = 0f;
+
+            var y = Volumns / 2;
+            var x = CurrentVol;
+            var isMinus = x < y;
+            if (isMinus)
+            {
+                var angle = Math.Acos((y - x) / y) * 180 / Math.PI;
+                startAngle = (float)(270 - angle);
+                sweepAngle = (90 - (startAngle - 180)) * 2;
+            }
+            else
+            {
+                var angle = Math.Asin((x - y) / y) * 180 / Math.PI;
+                startAngle = (float)(180 - angle);
+                sweepAngle = (180 - startAngle) * 2 + 180;
+            }
+            myGraphicsPath.AddArc(rectARC, startAngle, sweepAngle);
+            gfxx.FillPath(brushARC, myGraphicsPath);
+            gfxx.DrawPath(penARC, myGraphicsPath);
+            #endregion
+
+            #region 绘制文字
+
+            if (Font.Size <= 1)
+                Font.Size = 1;
+            if (Font.Size > 33)
+                Font.Size = 33;
 
             using (Graphics gfx = GDI.Graphics(bmp, dims, lowQuality))
             using (var font = GDI.Font(Font))
             using (var fontBrush = new SolidBrush(Font.Color))
             using (var frameBrush = new SolidBrush(BackgroundColor))
-            using (var outlinePen = new System.Drawing.Pen(BorderColor, BorderSize))
-            using (var redPen = new System.Drawing.Pen(Color.Red, BorderSize))
+            //using (var outlinePen = new System.Drawing.Pen(BorderColor, BorderSize))
+            //using (var redPen = new System.Drawing.Pen(Color.Red, BorderSize))
             {
                 float pixelX = dims.GetPixelX(X) + PixelOffsetX;
                 float pixelY = dims.GetPixelY(Y) - PixelOffsetY;
@@ -202,13 +305,13 @@ namespace WorkpieceTray.Controls
                 (float dX, float dY) = GDI.TranslateString(gfx, Label, Font);
                 gfx.TranslateTransform(-dX, -dY);
 
-                if (BackgroundFill)
-                {
-                    RectangleF stringRect = new(0, 0, stringSize.Width, stringSize.Height);
-                    gfx.FillRectangle(frameBrush, stringRect);
-                    if (BorderSize > 0)
-                        gfx.DrawRectangle(outlinePen, stringRect.X, stringRect.Y, stringRect.Width, stringRect.Height);
-                }
+                //if (BackgroundFill)
+                //{
+                //    RectangleF stringRect = new(0, 0, stringSize.Width, stringSize.Height);
+                //    gfx.FillRectangle(frameBrush, stringRect);
+                //    if (BorderSize > 0)
+                //        gfx.DrawRectangle(outlinePen, stringRect.X, stringRect.Y, stringRect.Width, stringRect.Height);
+                //}
 
                 gfx.DrawString(Label, font, fontBrush, new PointF(0, 0));
 
@@ -229,11 +332,40 @@ namespace WorkpieceTray.Controls
                     right: (float)dims.GetCoordinateX(pointC.X),
                     bottom: (float)dims.GetCoordinateY(pointA.Y));
             }
-
-
+            #endregion
         }
 
         public bool CellTest(Coordinate coord)
             => CellTestEnabled && Math.Abs(coord.X - X) <= RadiusX && Math.Abs(coord.Y - Y) <= RadiusY;
+
+        public bool IsUnderMouse(double coordinateX, double coordinateY, double snapX, double snapY)
+        {
+            double dX = Math.Abs(X - coordinateX);
+            double dY = Math.Abs(Y - coordinateY);
+            if (dX - RadiusX <= snapX && dY - RadiusY <= snapY)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public void DragTo(double coordinateX, double coordinateY, bool fixedSize)
+        {
+            if (!DragEnabled)
+                return;
+
+            Coordinate requested = new(coordinateX, coordinateY);
+            Coordinate snapped = DragSnap.Snap(requested);
+            Coordinate actual = MovePointFunc(X, Y, snapped);
+            X = actual.X;
+            Y = actual.Y;
+            Dragged(this, new DraggedEventArgs { CoordinateX = coordinateX,CoordinateY = coordinateY });
+        }
+        /// <summary>
+        /// Assign custom the logic here to control where individual points can be moved.
+        /// This logic occurs after snapping.
+        /// </summary>
+        public Func<double, double, Coordinate, Coordinate> MovePointFunc { get; set; } = (x, y, moveTo) => moveTo;
+
     }
 }

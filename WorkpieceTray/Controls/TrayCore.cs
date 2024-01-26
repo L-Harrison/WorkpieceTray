@@ -3,6 +3,7 @@
 using ScottPlot;
 using ScottPlot.Control;
 using ScottPlot.Drawing;
+using ScottPlot.Drawing.Colormaps;
 using ScottPlot.Plottable;
 using ScottPlot.Renderable;
 using ScottPlot.SnapLogic;
@@ -17,6 +18,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Reflection;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -30,28 +32,19 @@ using System.Windows.Threading;
 
 using WorkpieceTray.Controls;
 using WorkpieceTray.Extensions;
+using WorkpieceTray.Models;
 
 using Cursor = ScottPlot.Cursor;
 using Image = System.Windows.Controls.Image;
 
 namespace WorkpieceTray
 {
-    [TemplatePart(Name = GradientName, Type = typeof(ToggleButton))]
-    [TemplatePart(Name = RealGradientName, Type = typeof(ToggleButton))]
-    [TemplatePart(Name = SpeedName, Type = typeof(ToggleButton))]
-    [TemplatePart(Name = RealSpeedName, Type = typeof(ToggleButton))]
-    [TemplatePart(Name = PressureName, Type = typeof(ToggleButton))]
     [TemplatePart(Name = GraphName, Type = typeof(ItemsControl))]
     [TemplatePart(Name = PlotImageName, Type = typeof(Image))]
     [TemplatePart(Name = MarinGName, Type = typeof(Grid))]
     public class TrayCore : UserControl
     {
 
-        public const string GradientName = "Part_Gradient";
-        public const string RealGradientName = "Part_RealGradient";
-        public const string SpeedName = "Part_Speed";
-        public const string RealSpeedName = "Part_RealSpeed";
-        public const string PressureName = "Part_Pressure";
         public const string GraphName = "Part_Graph";
         public const string PlotImageName = "Part_PlotImage";
         public const string MarinGName = "Part_MarinG";
@@ -68,6 +61,8 @@ namespace WorkpieceTray
         internal bool isHighRefresh = false;
 
         private System.Windows.Threading.DispatcherTimer _renderTimer;
+
+        List<PanelModel> Panels = new();
 
         #region Draggable
 
@@ -176,6 +171,18 @@ namespace WorkpieceTray
         }
         public TrayCore()
         {
+            Cursors = new Dictionary<Cursor, System.Windows.Input.Cursor>()
+            {
+                [ScottPlot.Cursor.Arrow] = System.Windows.Input.Cursors.Arrow,
+                [ScottPlot.Cursor.WE] = System.Windows.Input.Cursors.SizeWE,
+                [ScottPlot.Cursor.NS] = System.Windows.Input.Cursors.SizeNS,
+                [ScottPlot.Cursor.All] = System.Windows.Input.Cursors.SizeAll,
+                [ScottPlot.Cursor.Crosshair] = System.Windows.Input.Cursors.Cross,
+                [ScottPlot.Cursor.Hand] = System.Windows.Input.Cursors.Hand,
+                [ScottPlot.Cursor.Question] = System.Windows.Input.Cursors.Help,
+            };
+            RightClicked += DefaultRightClickEvent!;
+
             Backend = new ControlBackEnd(1, 1, GetType().Name);
             Backend.Resize((float)ActualWidth, (float)ActualHeight, useDelayedRendering: false);
             Backend.BitmapChanged += new EventHandler((sender, e) => ReplacePlotBitmap(Backend.GetLatestBitmap()));
@@ -189,111 +196,138 @@ namespace WorkpieceTray
             Backend.PlottableDropped += new EventHandler((sender, e) => PlottableDropped?.Invoke(sender, e));
             Backend.Configuration.ScaleChanged += new EventHandler((sender, e) => Backend.Resize(ScaledWidth, ScaledHeight, useDelayedRendering: true));
 
-               Configuration = Backend.Configuration;
+            Configuration = Backend.Configuration;
+            Configuration.Pan = false;
+            Configuration.LeftClickDragPan = true;
+            Configuration.AltLeftClickDragZoom = false;
 
-            //Configuration.AltLeftClickDragZoom = false;
-            //Configuration.LeftClickDragPan = false;
+            Configuration.RightClickDragZoom = false;
+            Configuration.LockHorizontalAxis = false;
+            Configuration.LockVerticalAxis = false;
+            Configuration.MiddleClickAutoAxis = false;
 
-            //Configuration.Quality = ScottPlot.Control.QualityMode.Low;
-            //Configuration.DpiStretch = false;
-            //Configuration.DpiStretchRatio =.9f;
+            Configuration.MiddleClickDragZoom = false;
+            Configuration.RightClickDragZoomFromMouseDown = false;
+
+            Configuration.WarnIfRenderNotCalledManually = false;
 
             //Backend.Plot.Style(ScottPlot.Style.Blue1);
             Backend.Plot.Grid(false);
-            //Backend.Plot.Frameless(true);
-
+            Backend.Plot.Frameless(true);
             Backend.Plot.Layout(0, 0, 0, 0, 0);
 
-            if (DesignerProperties.GetIsInDesignMode(this))
-            {
-                try
-                {
-                    Configuration.WarnIfRenderNotCalledManually = false;
-                    Plot.Title($"ScottPlot {Plot.Version}");
-                    Plot.Render();
-                }
-                catch (Exception e)
-                {
-                    //InitializeComponent();
-                    PlotImage.Visibility = System.Windows.Visibility.Hidden;
-                    //ErrorLabel.Text = "ERROR: ScottPlot failed to render in design mode.\n\n" +
-                    //    "This may be due to incompatible System.Drawing.Common versions or a 32-bit/64-bit mismatch.\n\n" +
-                    //    "Although rendering failed at design time, it may still function normally at runtime.\n\n" +
-                    //    $"Exception details:\n{e}";
-                    return;
-                }
-            }
-            Cursors = new Dictionary<Cursor, System.Windows.Input.Cursor>()
-            {
-                [ScottPlot.Cursor.Arrow] = System.Windows.Input.Cursors.Arrow,
-                [ScottPlot.Cursor.WE] = System.Windows.Input.Cursors.SizeWE,
-                [ScottPlot.Cursor.NS] = System.Windows.Input.Cursors.SizeNS,
-                [ScottPlot.Cursor.All] = System.Windows.Input.Cursors.SizeAll,
-                [ScottPlot.Cursor.Crosshair] = System.Windows.Input.Cursors.Cross,
-                [ScottPlot.Cursor.Hand] = System.Windows.Input.Cursors.Hand,
-                [ScottPlot.Cursor.Question] = System.Windows.Input.Cursors.Help,
-            };
 
-            DefaultMenus();
-            RightClicked += DefaultRightClickEvent!;
-            //InitializeComponent();
-            //ErrorLabel.Visibility = System.Windows.Visibility.Hidden;
             Backend.StartProcessingEvents();
 
+            //Plot.Width = 800;
+            //Plot.Height = 500;
 
-            // create a timer to update the GUI
+
+            AutoZoom = true;
+            DefaultMenus();
+
+
+
             _renderTimer = new DispatcherTimer();
             _renderTimer.Interval = TimeSpan.FromMilliseconds(20);
             _renderTimer.Tick += (sender, e) => AutoRender(false);
             _renderTimer.Start();
 
 
-            AxesChanged += TrayCore_AxesChanged;
-
-
-
-            int row = 14;
-            int col = 5;
-            var te = DrawCells(row, col);
-            foreach (var item in DrawCells(row, col))
-            {
-                DrawCell(item.currentCol * 20, item.currentRow * 20, 8, 1, item.cellName);
-            }
             Plot.AxisScaleLock(true); // this forces pixels to have 1:1 scale ratio
+            Plot.SetAxisLimitsX(0, 550, 0);
+            Plot.SetAxisLimitsY(0, 300, 0);
 
-
-        }
-
-        private void TrayCore_AxesChanged(object? sender, EventArgs e)
-        {
-            var r = (TrayCore)sender;
-        }
-
-        private List<(int index, string cellName, int currentRow, int currentCol)> DrawCells(int rows, int columns)
-        {
-            var res = new List<(int index, string cellName, int currentRow, int currentCol)>();
-            for (int row = 1; row <= rows; row++)
+            Init();
+            _ = Task.Run(async () =>
             {
-                for (int col = 0; col < columns; col++)
+                foreach (var item in Panels)
                 {
-                    var index_name = columns.ToIndexAndName(row, col);
-                    //for (int i = 0; i < injectionVolumse.Count; i++)
-                    //{
-                    //    injectionVolumse[i].Name = $"{index_name}-{i}";
-                    //}
-                    res.Add(index_name);
-
+                    foreach (var cell in item.Cells)
+                    {
+                        cell.Volumns = 15;
+                        while (true)
+                        {
+                            if (cell.CurrentVol+.05>=cell.Volumns)
+                            {
+                                break;
+                            }
+                            cell.CurrentVol += .3;
+                            await Task.Delay(20);
+                        }
+                    }
                 }
-            }
-            return res;
+            });
+
+            this.KeyDown += (sender, e) =>
+            {
+                if (/*e.KeyboardDevice.Modifiers == ModifierKeys.Control &&*/ e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl)
+                {
+                    //同时按下了Ctrl + H键（H要最后按，因为判断了此次事件的e.Key）
+                    //修饰键只能按下Ctrl，如果还同时按下了其他修饰键，则不会进入
+                    isLeftKeyDown = true;
+                }
+            };
+            this.KeyDown += (sender, e) =>
+            {
+                isLeftKeyDown = false;
+            };
         }
-        List<Cell> texts = new List<Cell>();
-        private Cell DrawCell(double x, double y, double radius, double lineWidth, string cellName)
+
+
+
+        private void Init()
         {
-            var cell = Plot.AddCell(cellName, x, y, radius, radius, size: 13,lableColor:null,color:null, lineWidth: (float)lineWidth, default);
-            cell.Alignment = Alignment.MiddleCenter;
-            //cell.Color =System.Drawing. Color.Red;
-            return cell;
+
+            int row = 16;
+            int col = 6;
+            var cellSize = 20d;
+            var radius = 8d;
+            var panelWidth = (col + 2) * cellSize;
+
+            var x = 0d;
+            var y = 0d;
+
+            var pane0 = Plot.AddPanel(
+                    PanelIndex: 0,
+                    panelX: x,
+                    panelY: y,
+                    panelWidth: panelWidth,
+                      cellsRow: row, cellsCol: col, cellSize: cellSize,
+                      radius: radius,
+                      panelColor: System.Drawing.Color.LightGray,
+                      cellColor: null,
+                      cellBorderColor: null);
+            Panels.Add(pane0);
+
+            x += panelWidth;
+
+
+            row = 14;
+            col = 5;
+            cellSize = 22.7;
+            radius = 8;
+            panelWidth = (col + 2) * cellSize;
+
+            for (int panel = 1; panel < 5; panel++)
+            {
+
+                var pane = Plot.AddPanel(
+                     PanelIndex: panel,
+                     panelX: x,
+                     panelY: y,
+                       panelWidth: panelWidth,
+                       cellsRow: row, cellsCol: col, cellSize: cellSize,
+                       radius: radius,
+                       panelColor: System.Drawing.Color.LightGray,
+                       cellColor: null,
+                       cellBorderColor: System.Drawing.Color.Gray);
+                Panels.Add(pane);
+
+                x += panelWidth;
+
+            }
+       
         }
 
         #region Plot method
@@ -472,11 +506,12 @@ namespace WorkpieceTray
         }
         public Func<ContextMenu, ContextMenu> ContextMenuPreviousExcute { get; set; } = (moveTo) => moveTo;
         private void RightClickMenu_Copy_Click(object sender, EventArgs e) => System.Windows.Clipboard.SetImage(BmpImageFromBmp(Plot.Render()));
-        //private void RightClickMenu_Help_Click(object sender, EventArgs e) => new WPF.HelpWindow().Show();
-        //private void RightClickMenu_OpenInNewWindow_Click(object sender, EventArgs e) => new WpfPlotViewer(Plot).Show();
         private void RightClickMenu_AutoAxis_Click(object sender, EventArgs e)
         {
             AutoZoom = true;
+            var s = Panels.Select(_ => _.Panel.GetAxisLimits());
+            Plot.YAxis.SetSizeLimit(min: 0, max: 350);
+            Plot.XAxis.SetSizeLimit(min: 0, max: 800);
             Plot.AxisAuto();
             Refresh(isHighRefresh);
         }
@@ -508,7 +543,6 @@ namespace WorkpieceTray
                 {
                     //Mouse.Capture(contentControl);
                     Backend.MouseDown(GetInputState(e));
-
                     if (e.ChangedButton == MouseButton.Left)
                         AutoZoom = false;
 
@@ -517,7 +551,6 @@ namespace WorkpieceTray
                 {
                     Backend.MouseMove(GetInputState(e));
                     base.OnMouseMove(e);
-
                     var pixelX = e.MouseDevice.GetPosition(this).X;
                     var pixelY = e.MouseDevice.GetPosition(this).Y;
 
@@ -525,19 +558,6 @@ namespace WorkpieceTray
 
                     var p = Plot.GetPlottables();
 
-                    var list = new List<(ScatterPlot plot, double pointX, double pointY, int pointIndex, double rx)>();
-                    foreach (var item in Plot.GetPlottables().Where(x => x is IPlottable p && p.IsVisible))
-                    {
-                        if (item is ScatterPlot sp)
-                        {
-                            (double pointX, double pointY, int pointIndex) = sp.GetPointNearest(coordinateX, coordinateY);
-                            if (Math.Abs(pointX - coordinateX) < 10 && Math.Abs(pointY - coordinateY) < 10)
-                            {
-                                var rt = Math.Abs(pointX - coordinateX) < Math.Abs(pointY - coordinateY) ? Math.Abs(pointX - coordinateX) : Math.Abs(pointY - coordinateY);
-                                list.Add((sp, pointX, pointY, pointIndex, rt));
-                            }
-                        }
-                    }
                     foreach (var item in Plot.GetCelltable())
                     {
                         if (item is Cell plottable)
@@ -553,7 +573,7 @@ namespace WorkpieceTray
                             if (hittable.CellTest(c))
                             {
                                 plottable.BorderLineWidth = 4;
-                                plottable.FontBold=true;
+                                plottable.FontBold = true;
                             }
                             else
                             {
@@ -562,60 +582,52 @@ namespace WorkpieceTray
                             }
                         }
                     }
-                    var dr = Plot.GetCelltable(pixelX, pixelY);
-                    if (dr != null&&dr is Cell cell )
-                    {
-                        Trace.WriteLine((dr as Cell).Label);
-                        //scatterPlot.MarkerShape = MarkerShape.filledDiamond;
-                        //Crosshair.Color = scatterPlot.Color;
-                    }
-                    else
-                    {
-                        if (list.Any())
-                        {
-                            var plt = list.OrderBy(_ => _.rx).First().plot;
-                            //plt.IsHighlighted = true;
-                            //Crosshair.Color = plt.Color;
-                            //plt.MarkerShape = MarkerShape.none;
-                        }
-                        else
-                        {
-                            //Crosshair.Color = System.Drawing.Color.Green;
-                        }
-
-                    }
                     this.Refresh(false);
                 };
                 contentControl.MouseUp += (sender, e) =>
                 {
-                    //DragableTip.IsVisible = false;
                     Backend.MouseUp(GetInputState(e));
                     ReleaseMouseCapture();
                 };
+                contentControl.KeyDown += (sender, e) =>
+                {
+                    if (/*e.KeyboardDevice.Modifiers == ModifierKeys.Control &&*/ e.Key == Key.LeftCtrl||e.Key == Key.RightCtrl)
+                    {
+                        //同时按下了Ctrl + H键（H要最后按，因为判断了此次事件的e.Key）
+                        //修饰键只能按下Ctrl，如果还同时按下了其他修饰键，则不会进入
+                        isLeftKeyDown = true;
+                    }
+                };
+                contentControl.KeyDown += (sender, e) =>
+                {
+                    isLeftKeyDown = false;
+                };
                 contentControl.MouseWheel += (sender, e) =>
                 {
-                    foreach (var item in texts)
+
+                    if (isLeftKeyDown)
+                    foreach (var item in Panels)
                     {
-                        item.FontSize +=(float) e.Delta * 0.01f;
+                        //if (Configuration.MiddleClickDragZoom)
+                        foreach (var cell in item.Cells)
+                        {
+                            cell.FontSize += (float)e.Delta * 0.01f;
+                        }
                     }
-                    Backend.MouseWheel(GetInputState(e, e.Delta));
-                    AutoZoom = false;
+                    else
+                    {
+                        Backend.MouseWheel(GetInputState(e, e.Delta));
+                        AutoZoom = false;
+                    }
                 };
-                //contentControl.MouseDoubleClick += (sender, e) =>
-                //{
-                //    Debug.WriteLine("MouseDoubleClick");
-                //    Backend.DoubleClick();
-                //};
+
                 contentControl.MouseEnter += (sender, e) =>
                 {
-                    //Mouse.Capture(contentControl);
-                    //Crosshair.IsVisible = true;
                     isHighRefresh = true;
                     base.OnMouseEnter(e);
                 };
                 contentControl.MouseLeave += (sender, e) =>
                 {
-                    //Crosshair.IsVisible = false;
                     isHighRefresh = false;
                     //if (Mouse.Captured == contentControl)
                     //    Mouse.Capture(null);
@@ -636,42 +648,21 @@ namespace WorkpieceTray
                         //else
                         //    CurrentDraggableGraph.CurrentDraggableGraphType = GraphType.Null;
                     }
-                    if (e.ClickCount == 2)
-                    {
-
-                        var ht = Plot.GetHittable(pixelX, pixelY);
-                        if (ht != null)
-                        {
-                            //if (ht == DragableTip && ht.IsVisible)
-                            //{
-                            //    return;
-                            //}
-                        }
-                        else
-                        {
-                            //UpdateDraggable(dr!);
-                        }
-                        //DraggableUpdatedHandler?.Invoke(sender, CurrentDraggableGraph);
-                    }
-                    else
-                    {
-                        //DraggableUpdatedHandler?.Invoke(sender, CurrentDraggableGraph);
-
-                    }
                 };
 
             }
             if (GetTemplateChild(MarinGName) is Grid grid)
             {
                 grid.SizeChanged += (sender, e) =>
-                   Backend.Resize(ScaledWidth, ScaledHeight, useDelayedRendering: true);
+                {
+                    Backend.Resize(ScaledWidth, ScaledHeight, useDelayedRendering: true);
+                    Backend.Plot.AxisAuto();
+                };
+           
             }
         }
-
-
+        bool isLeftKeyDown=false;
         #endregion
-
-
 
     }
 }
