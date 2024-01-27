@@ -9,7 +9,17 @@
         Width="1000"
         Height="530"
         mc:Ignorable="d">
-    <Grid Background="Red">
-        <tray:TrayCore />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="auto" />
+        </Grid.RowDefinitions>
+        <tray:TrayCore EnableCellDraggable="True" EnablePanelDraggable="True" IsCellOver="TrayCore_IsCellOver"
+                       ItemsSource="{Binding Trays}"
+                       MouseDoubleClick="TrayCore_MouseDoubleClick" Theme="Default" />
+        <!--<UniformGrid Grid.Row="1" Columns="2">
+            <Button Click="Button_Click" Content="add" />
+            <Button Click="Button_remove_Click" Content="Remove" />
+        </UniformGrid>-->
     </Grid>
 </Window>

@@ -26,6 +26,9 @@ namespace WorkpieceTray.Controls
     }
     public class Cell : IPlottable, IHasColor, IHasArea, ICell, IDraggable
     {
+        public int Index { get; set; }
+        public string Name { get; set; }
+        public Guid Id { get; set; }
 
         // data
         // customization
@@ -34,7 +37,7 @@ namespace WorkpieceTray.Controls
         public int YAxisIndex { get; set; } = 0;
         //public bool BackgroundFill = false;
         public Color BackgroundColor;
-        public Font Font = new Font();
+        Font Font = new Font();
 
         public event EventHandler Dragged = delegate { };
 
@@ -195,7 +198,7 @@ namespace WorkpieceTray.Controls
         // This method describes how to plot the data on the cart.
         public void Render(PlotDimensions dims, System.Drawing.Bitmap bmp, bool lowQuality = false)
         {
-         
+
 
             #region 绘制圆/椭圆
 
@@ -203,6 +206,7 @@ namespace WorkpieceTray.Controls
             using var gfxxc = ScottPlot.Drawing.GDI.Graphics(bmp, dims, lowQuality);
             using var pen = ScottPlot.Drawing.GDI.Pen(BorderColor, BorderLineWidth, BorderLineStyle);
             //using var brush = ScottPlot.Drawing.GDI.Brush(Color, HatchColor, HatchStyle);
+            //using var brush = ScottPlot.Drawing.GDI.Brush(Color.White, HatchColor, HatchStyle);
 
             // Use 'dims' methods to convert between axis coordinates and pixel positions
             float xPixel = dims.GetPixelX(X);
@@ -219,6 +223,7 @@ namespace WorkpieceTray.Controls
             RectangleF rect = new(-1, -1, 2, 2);
 
             // Render data by drawing on the Graphics object
+            //gfxxc.FillEllipse(brush, rect);  
             //if (Color != Color.Transparent)
             //    gfxxc.FillEllipse(brush, rect);
 
@@ -291,7 +296,7 @@ namespace WorkpieceTray.Controls
 
             using (Graphics gfx = GDI.Graphics(bmp, dims, lowQuality))
             using (var font = GDI.Font(Font))
-            using (var fontBrush = new SolidBrush(Font.Color))
+            using (var fontBrush = new SolidBrush(FontColor))
             using (var frameBrush = new SolidBrush(BackgroundColor))
             //using (var outlinePen = new System.Drawing.Pen(BorderColor, BorderSize))
             //using (var redPen = new System.Drawing.Pen(Color.Red, BorderSize))
@@ -360,7 +365,7 @@ namespace WorkpieceTray.Controls
             Coordinate actual = MovePointFunc(X, Y, snapped);
             X = actual.X;
             Y = actual.Y;
-            Dragged(this, new DraggedEventArgs { CoordinateX = coordinateX,CoordinateY = coordinateY });
+            Dragged(this, new DraggedEventArgs { CoordinateX = coordinateX, CoordinateY = coordinateY });
         }
         /// <summary>
         /// Assign custom the logic here to control where individual points can be moved.

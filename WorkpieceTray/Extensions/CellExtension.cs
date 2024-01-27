@@ -28,13 +28,13 @@ namespace WorkpieceTray.Extensions
         /// </summary>
         public static Cell AddCell(this Plot plot, string label, double x, double y, double xRadius, double yRadius, float size = 12, System.Drawing.Color? fontColor = null, System.Drawing.Color? color = null, System.Drawing.Color? borderColor = null, float lineWidth = 2, LineStyle lineStyle = LineStyle.Solid)
         {
-            var font = new ScottPlot.Drawing.Font() { Size = size, Color = fontColor ?? plot.GetNextColor() };
             Cell plottable = new(x, y, xRadius, yRadius, color ?? plot.GetNextColor(), borderColor: borderColor ?? plot.GetNextColor())
             {
                 BorderLineWidth = lineWidth,
                 BorderLineStyle = lineStyle,
                 Label = label,
-                Font = font,
+                FontSize= size,
+                FontColor=   fontColor ?? plot.GetNextColor(),
             };
             plot.Add(plottable);
             return plottable;

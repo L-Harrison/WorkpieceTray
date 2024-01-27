@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <AssemblyVersion>1.0.24.24</AssemblyVersion>
-    <FileVersion>86.85.85.0</FileVersion>
+    <FileVersion>220.219.219.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
