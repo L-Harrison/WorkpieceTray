@@ -19,6 +19,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.Linq;
 using System.Reflection;
 using System.Security.Policy;
@@ -67,6 +68,180 @@ namespace WorkpieceTray
 
         private System.Windows.Threading.DispatcherTimer _renderTimer;
 
+
+        #region Header
+
+        public TrayHeaderMode HeaderMode
+        {
+            get { return (TrayHeaderMode)GetValue(HeaderModeProperty); }
+            set { SetValue(HeaderModeProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for HeaderMode.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty HeaderModeProperty =
+            DependencyProperty.Register("HeaderMode", typeof(TrayHeaderMode), typeof(TrayCore), new PropertyMetadata(TrayHeaderMode.None, (d, e) =>
+            {
+                if (((TrayCore)d).ItemsSource != null)
+                {
+                    var val = (TrayHeaderMode)e.NewValue;
+                    foreach (var item in ((TrayCore)d).ItemsSource)
+                    {
+                        switch (val)
+                        {
+                            case TrayHeaderMode.Header:
+                                if (item.Header != null)
+                                    item.Header.IsVisible = true;
+                                if (item.Header2 != null)
+                                    item.Header2.IsVisible = false;
+                                break;
+                            case TrayHeaderMode.Header2:
+                                if (item.Header != null)
+                                    item.Header.IsVisible = false;
+                                if (item.Header2 != null)
+                                    item.Header2.IsVisible = true;
+                                break;
+                            default:
+                                if (item.Header != null)
+                                    item.Header.IsVisible = false;
+                                if (item.Header2 != null)
+                                    item.Header2.IsVisible = false;
+                                break;
+                        }
+                    }
+                }
+
+            }));
+
+
+        public ScottPlot.Drawing.Font? HeaderFont
+        {
+            get { return (ScottPlot.Drawing.Font?)GetValue(HeaderFontProperty); }
+            set { SetValue(HeaderFontProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for HeadrFont.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty HeaderFontProperty =
+            DependencyProperty.Register("HeaderFont", typeof(ScottPlot.Drawing.Font), typeof(TrayCore), new PropertyMetadata(null, (d, e) =>
+            {
+                if (((TrayCore)d).ItemsSource != null)
+                {
+                    if (e.NewValue is ScottPlot.Drawing.Font val)
+                    {
+                        foreach (var item in ((TrayCore)d).ItemsSource)
+                        {
+                            if (item.Header != null)
+                                item.Header.Font = val;
+                        }
+                    }
+                    else
+                    {
+                        ScottPlot.Drawing.Font font = new ScottPlot.Drawing.Font();
+                        font.Family = new System.Drawing.FontFamily(GenericFontFamilies.Serif);
+                        font.Alignment = Alignment.MiddleCenter;
+                        font.Color = ((TrayCore)d).Plot.GetNextColor();
+                        font.Size = 20;
+                        foreach (var item in ((TrayCore)d).ItemsSource)
+                        {
+                            if (item.Header != null)
+                                item.Header.Font = font;
+                        }
+                    }
+                }
+
+            }));
+
+
+        public ScottPlot.Drawing.Font? Header2Font
+        {
+            get { return (ScottPlot.Drawing.Font?)GetValue(Header2FontProperty); }
+            set { SetValue(Header2FontProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for Header2Font.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty Header2FontProperty =
+            DependencyProperty.Register("Header2Font", typeof(ScottPlot.Drawing.Font), typeof(TrayCore), new PropertyMetadata(null, (d, e) =>
+            {
+                if (((TrayCore)d).ItemsSource != null)
+                {
+                    if (e.NewValue is ScottPlot.Drawing.Font val)
+                    {
+                        foreach (var item in ((TrayCore)d).ItemsSource)
+                        {
+                            if (item.Header2 != null)
+                                item.Header2.Font = val;
+                        }
+                    }
+                    else
+                    {
+                        ScottPlot.Drawing.Font font = new ScottPlot.Drawing.Font();
+                        font.Alignment = Alignment.MiddleCenter;
+                        font.Color = ((TrayCore)d).Plot.GetNextColor();
+                        font.Size = 45;
+                        font.Family = new System.Drawing.FontFamily(GenericFontFamilies.Serif);
+                        foreach (var item in ((TrayCore)d).ItemsSource)
+                        {
+                            if (item.Header2 != null)
+                                item.Header2.Font = font;
+                        }
+                    }
+                }
+
+            }));
+
+
+        #endregion
+
+        #region Draggable
+
+        public bool EnablePanelDraggable
+        {
+            get { return (bool)GetValue(EnablePanelDraggableProperty); }
+            set { SetValue(EnablePanelDraggableProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for EnablePanelDraggable.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty EnablePanelDraggableProperty =
+            DependencyProperty.Register("EnablePanelDraggable", typeof(bool), typeof(TrayCore), new PropertyMetadata(false, OnEnablePanelDraggableChanged));
+
+        private static void OnEnablePanelDraggableChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var val = (bool)e.NewValue;
+            if (((TrayCore)d).ItemsSource != null)
+                foreach (var item in ((TrayCore)d).ItemsSource)
+                {
+                    if (item.Panel != null)
+                        item.Panel.DragEnabled = val;
+                }
+        }
+
+
+        public bool EnableCellDraggable
+        {
+            get { return (bool)GetValue(EnableCellDraggableProperty); }
+            set { SetValue(EnableCellDraggableProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for EnableCellDraggable.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty EnableCellDraggableProperty =
+            DependencyProperty.Register("EnableCellDraggable", typeof(bool), typeof(TrayCore), new PropertyMetadata(false, OnEnableCellDraggableChanged));
+
+        private static void OnEnableCellDraggableChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var val = (bool)e.NewValue;
+            if (((TrayCore)d).ItemsSource != null)
+                foreach (var item in ((TrayCore)d).ItemsSource)
+                {
+                    foreach (var cell in item.Cells)
+                    {
+                        cell.DragEnabled = val;
+                    }
+                }
+        }
+
+        #endregion
+
+
+
         #region ItemsSource
         public ObservableCollection<Tray> ItemsSource
         {
@@ -90,7 +265,27 @@ namespace WorkpieceTray
                 case System.Collections.Specialized.NotifyCollectionChangedAction.Add:
                     foreach (Tray item in e.NewItems)
                     {
-                        Plot.AddPanel(item);
+                        //ScottPlot.Drawing.Font font = new ScottPlot.Drawing.Font();
+                        //font.Family = new FontFamily(GenericFontFamilies.Serif);
+                        //font.Alignment = Alignment.MiddleCenter;
+                        //font.Color = plot.GetNextColor();
+                        //font.Size = 20;
+
+                        Plot.AddPanel(item, HeaderMode, EnablePanelDraggable, EnableCellDraggable);
+                        if (item.Header != null)
+                        {
+                            if (HeaderFont != null)
+                            {
+                                item.Header.Font = HeaderFont;
+                                item.Header.IsVisible = HeaderMode==TrayHeaderMode.Header;
+                            }
+                        }
+                        if (item.Header2 != null && Header2Font != null)
+                        {
+                            item.Header2.Font = Header2Font;
+                            item.Header2.IsVisible = HeaderMode == TrayHeaderMode.Header2;
+                        }
+
                     }
                     break;
                 case System.Collections.Specialized.NotifyCollectionChangedAction.Remove:
@@ -117,15 +312,24 @@ namespace WorkpieceTray
                 Plot.Clear();
                 foreach (var item in tr)
                 {
-                    Plot.AddPanel(item);
+                    Plot.AddPanel(item, HeaderMode, EnablePanelDraggable, EnableCellDraggable);
+                    if (item.Header != null)
+                    {
+                        if (HeaderFont != null)
+                        {
+                            item.Header.Font = HeaderFont;
+                            item.Header.IsVisible = HeaderMode == TrayHeaderMode.Header;
+                        }
+                    }
+                    if (item.Header2 != null && Header2Font != null)
+                    {
+                        item.Header2.Font = Header2Font;
+                        item.Header2.IsVisible = HeaderMode == TrayHeaderMode.Header2;
+                    }
                 }
             }
         }
         #endregion
-
-        #region Draggable
-
-
 
 
         public event RoutedEventHandler IsCellOver
@@ -163,69 +367,14 @@ namespace WorkpieceTray
                 {
                     foreach (var item in ((TrayCore)d).ItemsSource)
                     {
-                        if (!item.CanSetFont)
+                        foreach (var cell in item.Cells)
                         {
-                            foreach (var cell in item.Cells)
-                            {
-                                cell.FontColor = style.TickLabelColor;
-                            }
+                            cell.FontColor = style.TickLabelColor;
                         }
                     }
                 }
 
             }));
-
-
-
-        public bool EnablePanelDraggable
-        {
-            get { return (bool)GetValue(EnablePanelDraggableProperty); }
-            set { SetValue(EnablePanelDraggableProperty, value); }
-        }
-
-        // Using a DependencyProperty as the backing store for EnablePanelDraggable.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty EnablePanelDraggableProperty =
-            DependencyProperty.Register("EnablePanelDraggable", typeof(bool), typeof(TrayCore), new PropertyMetadata(false, OnEnablePanelDraggableChanged));
-
-        private static void OnEnablePanelDraggableChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            var val = (bool)e.NewValue;
-            if (((TrayCore)d).ItemsSource != null)
-                foreach (var item in ((TrayCore)d).ItemsSource)
-                {
-                    item.EnableDraggable = val;
-                    if (item.Panel != null)
-                        item.Panel.DragEnabled = val;
-                }
-        }
-
-
-
-        public bool EnableCellDraggable
-        {
-            get { return (bool)GetValue(EnableCellDraggableProperty); }
-            set { SetValue(EnableCellDraggableProperty, value); }
-        }
-
-        // Using a DependencyProperty as the backing store for EnableCellDraggable.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty EnableCellDraggableProperty =
-            DependencyProperty.Register("EnableCellDraggable", typeof(bool), typeof(TrayCore), new PropertyMetadata(false, OnEnableCellDraggableChanged));
-
-        private static void OnEnableCellDraggableChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            var val = (bool)e.NewValue;
-            if (((TrayCore)d).ItemsSource != null)
-                foreach (var item in ((TrayCore)d).ItemsSource)
-                {
-                    item.EnableCellDraggable = val;
-                    foreach (var cell in item.Cells)
-                    {
-                        cell.DragEnabled = val;
-                    }
-                }
-        }
-
-        #endregion
 
 
         static TrayCore()
@@ -306,7 +455,6 @@ namespace WorkpieceTray
             Plot.SetAxisLimitsY(0, 300, 0);
 
         }
-
 
 
         #region OnApplyTemplate
@@ -393,7 +541,6 @@ namespace WorkpieceTray
                                     cell.FontSize += (float)e.Delta * 0.01f;
                                 }
                             }
-
                         }
                     else
                     {

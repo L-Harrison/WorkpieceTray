@@ -14,7 +14,9 @@
             <RowDefinition />
             <RowDefinition Height="auto" />
         </Grid.RowDefinitions>
-        <tray:TrayCore EnableCellDraggable="True" EnablePanelDraggable="True" IsCellOver="TrayCore_IsCellOver"
+        <tray:TrayCore EnableCellDraggable="True" EnablePanelDraggable="True"
+                       HeaderMode="{Binding HeaderMode, UpdateSourceTrigger=PropertyChanged}"
+                       IsCellOver="TrayCore_IsCellOver"
                        ItemsSource="{Binding Trays}"
                        MouseDoubleClick="TrayCore_MouseDoubleClick" Theme="Default" />
         <!--<UniformGrid Grid.Row="1" Columns="2">

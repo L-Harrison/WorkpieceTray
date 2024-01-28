@@ -29,6 +29,8 @@ namespace WorkpieceTray.Controls
         public int Index { get; set; }
         public string Name { get; set; }
         public Guid Id { get; set; }
+        public int RowValue { get; set; }
+        public int ColValue { get; set; }
 
         // data
         // customization
@@ -66,12 +68,12 @@ namespace WorkpieceTray.Controls
         /// <summary>
         /// Horizontal center of the circle (axis units)
         /// </summary>
-        double X { get; set; }
+        public double X { get; set; }
 
         /// <summary>
         /// Vertical center of the circle (axis units)
         /// </summary>
-        double Y { get; set; }
+        public double Y { get; set; }
 
         /// <summary>
         /// Horizontal radius (axis units)

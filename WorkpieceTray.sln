@@ -8,6 +8,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tray.Test", "Tray.Test\Tray.Test.csproj", "{177B2E45-5879-4752-90CA-2B61456A9FD6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Source", "Source", "{56C62F48-0B92-48FE-BAE0-72573F4E2E56}"
+	ProjectSection(SolutionItems) = preProject
+		ScottPlot.png = ScottPlot.png
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
