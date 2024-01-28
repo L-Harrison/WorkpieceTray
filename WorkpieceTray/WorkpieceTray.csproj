@@ -7,6 +7,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyVersion>1.0.24.24</AssemblyVersion>
     <FileVersion>200.199.199.0</FileVersion>
+
+	  <Version>0.2.0</Version>
+	  <Authors>HarrisonRay</Authors>
+	  <RepositoryUrl>https://github.com/L-Harrison/WorkpieceTray.git</RepositoryUrl>
+	  <PackageProjectUrl>https://github.com/L-Harrison/WorkpieceTray</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
