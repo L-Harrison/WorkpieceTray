@@ -34,5 +34,5 @@ jobs:
    
     - name: publish
       run: | 
-        nuget push .\WorkpieceTray\bin\release\*.nupkg  -Source https://api.nuget.org/v3/index.json -SkipDuplicate -ApiKey ${{secrets.Charting}} -NoSymbols 
+        nuget push .\WorkpieceTray\bin\release\*.nupkg  -Source https://api.nuget.org/v3/index.json -SkipDuplicate -ApiKey ${{secrets.Ray}} -NoSymbols 
     
